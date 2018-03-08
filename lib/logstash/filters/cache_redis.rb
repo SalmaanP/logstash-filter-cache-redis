@@ -19,6 +19,13 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
 
     # For now only working for rpushnx and llen!
     config :cmd_key_is_formatted, :validate => :boolean, :default => false
+	
+	# expire time for SETEX in seconds
+	config :ttl, :validate => :number
+	
+	# Options for zrangebyscore
+	config :min_value, :validate => :number
+	config :max_value, :validate => :number
 
     # The hostname(s) of your Redis server(s). Ports may be specified on any
     # hostname, which will override the global port config.
@@ -62,6 +69,8 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
     config :get, :validate => :string
 
     config :set, :validate => :string
+	
+	config :setex, :validate => :string
 
     config :exists, :validate => :string
 
@@ -108,6 +117,9 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
     # config :get, :validate => :boolean, :default => false
     # O(N)
     config :lget, :validate => :string
+	
+	config :zrangebyscore, :validate => :string
+	
 
 
     public
@@ -138,6 +150,10 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
 
             if @set
                 @redis.set(event.get(@set), event.get(@source))
+            end
+			
+			if @setex
+                @redis.setex(event.get(@setex), event.get(@ttl), event.get(@source))
             end
 
             if @exists
@@ -210,6 +226,12 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
             if @lget
                 event.set(@target, @redis.lrange(event.get(@lget), 0, -1))
             end
+			
+			if @zrangebyscore
+                @redis.zrangebyscore(event.get(@zrangebyscore), event.get(@min_value), event.get(@max_value), ":limit => [0, 1]"))
+            end
+			
+			
 
         rescue => e
             @logger.warn("Failed to send event to Redis, retrying after #{@reconnect_interval} seconds...", :event => event,
