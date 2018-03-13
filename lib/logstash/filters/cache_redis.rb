@@ -25,7 +25,7 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
 	
 	# Options for ZRANGEBYSCORE
 	config :min_value, :validate => :string
-	config :max_value, :validate => :string
+	config :max_value, :validate => :string, :default => "+inf"
 	config :offset, :validate => :number, :default => 0
 	config :count, :validate => :number, :default => 1
 
@@ -230,7 +230,7 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
             end
 			
 			if @zrangebyscore
-				event.set(@target, @redis.zrangebyscore(@zrangebyscore, @min_value, @max_value, :limit => [@offset,@count]))
+				event.set(@target, @redis.zrangebyscore(event.get(@zrangebyscore), event.get(@min_value), event.get(@max_value), :limit => [@offset,@count]))
             end
 			
 			
