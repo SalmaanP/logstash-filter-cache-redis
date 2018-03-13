@@ -21,11 +21,13 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
     config :cmd_key_is_formatted, :validate => :boolean, :default => false
 	
 	# expire time for SETEX in seconds
-	config :ttl, :validate => :number
+	config :expiration, :validate => :number, :default => 600
 	
 	# Options for zrangebyscore
-	config :min_value, :validate => :number
-	config :max_value, :validate => :number
+	config :min_value, :validate => :string
+	config :max_value, :validate => :string
+	config :limit_min, :validate => :number, :default => 0
+	config :limit_max, :validate => :number, :default => 1
 
     # The hostname(s) of your Redis server(s). Ports may be specified on any
     # hostname, which will override the global port config.
@@ -153,7 +155,9 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
             end
 			
 			if @setex
-                @redis.setex(event.get(@setex), event.get(@ttl), event.get(@source))
+				#@redis.set(event.get(@setex), event.get(@source))
+				#@redis.expire(event.get(@setex), @expiration)
+                @redis.setex(event.get(@setex), @expiration, event.get(@source))
             end
 
             if @exists
@@ -228,7 +232,10 @@ class LogStash::Filters::CacheRedis < LogStash::Filters::Base
             end
 			
 			if @zrangebyscore
-                @redis.zrangebyscore(event.get(@zrangebyscore), event.get(@min_value), event.get(@max_value), ":limit => [0, 1]"))
+				#@logger.warn((@redis.zrangebyscore(event.get(@zrangebyscore), event.get(@min_value), event.get(@max_value))).inspect)
+				#event.set(@target, @redis.zrangebyscore(event.get(@zrangebyscore), event.get(@min_value), event.get(@max_value)))
+				event.set(@target, @redis.zrangebyscore(@zrangebyscore, @min_value, @max_value, :limit => [@limit_min,@limit_max]))
+				#@logger.warn((@redis.zrangebyscore(@zrangebyscore, @min_value, "+inf", :limit => [0,1])).inspect)
             end
 			
 			
